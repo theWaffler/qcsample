@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QC Sampling Inspector — Internal Tool</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+--bg: #0f1117;
+--panel: #181c27;
+--panel2: #1e2333;
+--border: #2a2f3e;
+--accent: #f5c842;
+--accent2: #4af0b0;
+--danger: #ff5c5c;
+--blue: #5b8af5;
+--text: #e4e8f0;
+--muted: #7a8099;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+background: var(--bg);
+color: var(--text);
+font-family: ‘IBM Plex Sans’, sans-serif;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 40px 20px 60px;
+}
+
+.tab-nav {
+display: flex;
+gap: 4px;
+background: var(--panel);
+border: 1px solid var(--border);
+border-radius: 10px;
+padding: 5px;
+margin-bottom: 28px;
+width: 100%;
+max-width: 660px;
+}
+
+.tab-btn {
+flex: 1;
+background: transparent;
+border: none;
+color: var(--muted);
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 11px;
+letter-spacing: 1px;
+text-transform: uppercase;
+padding: 9px 6px;
+border-radius: 7px;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.tab-btn.active {
+background: var(--accent);
+color: #0f1117;
+font-weight: 600;
+}
+
+.tab-section { display: none; width: 100%; max-width: 660px; }
+.tab-section.active { display: block; }
+
+header {
+text-align: center;
+margin-bottom: 32px;
+width: 100%;
+max-width: 660px;
+}
+
+.tag {
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 10px;
+letter-spacing: 3px;
+color: var(--accent);
+text-transform: uppercase;
+margin-bottom: 10px;
+}
+
+h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; color: #fff; }
+h1 span { color: var(--accent); }
+.subtitle { margin-top: 8px; color: var(--muted); font-size: 13px; font-weight: 300; }
+
+.card {
+background: var(--panel);
+border: 1px solid var(--border);
+border-radius: 12px;
+padding: 24px;
+margin-bottom: 18px;
+}
+
+.card-title {
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 10px;
+letter-spacing: 2px;
+color: var(--muted);
+text-transform: uppercase;
+margin-bottom: 18px;
+padding-bottom: 12px;
+border-bottom: 1px solid var(--border);
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.card-title .dot {
+width: 6px; height: 6px;
+border-radius: 50%;
+background: var(--accent);
+display: inline-block;
+flex-shrink: 0;
+}
+
+.field { margin-bottom: 18px; }
+
+label {
+display: block;
+font-size: 13px;
+font-weight: 600;
+color: var(--text);
+margin-bottom: 6px;
+}
+
+label .hint {
+font-weight: 300;
+color: var(--muted);
+font-size: 12px;
+margin-left: 6px;
+}
+
+input[type=“number”] {
+width: 100%;
+background: var(--bg);
+border: 1px solid var(--border);
+border-radius: 8px;
+color: var(--text);
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 16px;
+padding: 11px 14px;
+outline: none;
+transition: border-color 0.2s;
+}
+
+input[type=“number”]:focus { border-color: var(--accent); }
+
+.slider-row { display: flex; align-items: center; gap: 14px; }
+
+input[type=“range”] {
+flex: 1;
+-webkit-appearance: none;
+background: var(--border);
+height: 4px;
+border-radius: 2px;
+outline: none;
+}
+
+input[type=“range”]::-webkit-slider-thumb {
+-webkit-appearance: none;
+width: 18px; height: 18px;
+border-radius: 50%;
+background: var(--accent);
+cursor: pointer;
+}
+
+.slider-val {
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 15px;
+color: var(--accent);
+min-width: 44px;
+text-align: right;
+}
+
+.btn-row { display: flex; gap: 8px; margin-top: 8px; }
+
+.btn-preset {
+flex: 1;
+background: var(--bg);
+border: 1px solid var(--border);
+color: var(--muted);
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 12px;
+padding: 8px;
+border-radius: 6px;
+cursor: pointer;
+transition: all 0.15s;
+}
+
+.btn-preset:hover, .btn-preset.active {
+border-color: var(--accent);
+color: var(--accent);
+background: rgba(245,200,66,0.07);
+}
+
+.result-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+}
+
+.result-box {
+background: var(--bg);
+border: 1px solid var(--border);
+border-radius: 10px;
+padding: 16px;
+text-align: center;
+}
+
+.result-box.primary {
+border-color: var(--accent);
+background: rgba(245,200,66,0.05);
+grid-column: 1 / -1;
+}
+
+.result-box .rlabel {
+font-size: 10px;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(--muted);
+font-family: ‘IBM Plex Mono’, monospace;
+margin-bottom: 8px;
+}
+
+.result-box .value {
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 30px;
+font-weight: 600;
+color: var(--accent);
+}
+
+.result-box.primary .value { font-size: 52px; }
+.result-box .unit { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.verdict {
+margin-top: 16px;
+padding: 14px 16px;
+border-radius: 8px;
+font-size: 13px;
+line-height: 1.65;
+background: rgba(74,240,176,0.07);
+border: 1px solid rgba(74,240,176,0.25);
+color: var(--accent2);
+}
+
+.pct-bar-wrap {
+margin-top: 14px;
+background: var(--border);
+border-radius: 4px;
+height: 6px;
+overflow: hidden;
+}
+
+.pct-bar {
+height: 100%;
+border-radius: 4px;
+background: var(--accent);
+transition: width 0.4s ease;
+}
+
+.pct-label {
+display: flex;
+justify-content: space-between;
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 10px;
+color: var(--muted);
+margin-top: 5px;
+}
+
+.data-table {
+width: 100%;
+border-collapse: collapse;
+font-size: 13px;
+margin-top: 4px;
+}
+
+.data-table th {
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 10px;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(--muted);
+padding: 8px 12px;
+text-align: left;
+border-bottom: 1px solid var(--border);
+}
+
+.data-table td {
+padding: 10px 12px;
+border-bottom: 1px solid rgba(42,47,62,0.5);
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 12px;
+vertical-align: middle;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr.highlight td { background: rgba(245,200,66,0.04); }
+
+.badge {
+display: inline-block;
+padding: 3px 10px;
+border-radius: 4px;
+font-size: 11px;
+font-weight: 600;
+font-family: ‘IBM Plex Mono’, monospace;
+letter-spacing: 0.5px;
+}
+
+.badge.pass { background: rgba(74,240,176,0.12); color: var(--accent2); border: 1px solid rgba(74,240,176,0.3); }
+.badge.fail { background: rgba(255,92,92,0.12); color: var(--danger); border: 1px solid rgba(255,92,92,0.3); }
+.badge.action { background: rgba(91,138,245,0.12); color: var(--blue); border: 1px solid rgba(91,138,245,0.3); }
+.badge.neutral { background: rgba(122,128,153,0.12); color: var(--muted); border: 1px solid rgba(122,128,153,0.3); }
+
+.step-list { list-style: none; counter-reset: steps; }
+
+.step-list li {
+counter-increment: steps;
+display: flex;
+gap: 16px;
+margin-bottom: 20px;
+align-items: flex-start;
+}
+
+.step-list li:last-child { margin-bottom: 0; }
+
+.step-num {
+flex-shrink: 0;
+width: 28px; height: 28px;
+border-radius: 50%;
+background: rgba(245,200,66,0.12);
+border: 1px solid rgba(245,200,66,0.35);
+color: var(--accent);
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 12px;
+font-weight: 600;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+.step-body { flex: 1; padding-top: 3px; }
+.step-body strong { color: #fff; font-size: 14px; display: block; margin-bottom: 4px; }
+.step-body p { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.step-body .em { color: var(--accent); font-style: normal; }
+
+.math-block {
+background: var(--bg);
+border: 1px solid var(--border);
+border-radius: 8px;
+padding: 16px 18px;
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 13px;
+color: var(--text);
+margin: 12px 0;
+line-height: 2;
+overflow-x: auto;
+white-space: pre;
+}
+
+.math-block .comment { color: var(--muted); }
+.math-block .hi { color: var(--accent); font-weight: 600; }
+.math-block .hi2 { color: var(--accent2); }
+
+.info-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+margin: 14px 0;
+}
+
+.info-box {
+background: var(--bg);
+border: 1px solid var(--border);
+border-radius: 8px;
+padding: 14px;
+}
+
+.info-box .ikey {
+font-family: ‘IBM Plex Mono’, monospace;
+font-size: 10px;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+color: var(--muted);
+margin-bottom: 6px;
+}
+
+.info-box .ival {
+font-size: 13px;
+color: var(--text);
+line-height: 1.55;
+}
+
+.info-box .ival .accent { color: var(--accent); }
+
+.callout {
+border-left: 3px solid var(--accent);
+background: rgba(245,200,66,0.04);
+border-radius: 0 8px 8px 0;
+padding: 12px 16px;
+font-size: 13px;
+color: var(--muted);
+line-height: 1.7;
+margin: 14px 0;
+}
+
+.callout strong { color: var(--text); }
+.callout.blue { border-left-color: var(--blue); background: rgba(91,138,245,0.04); }
+.callout.green { border-left-color: var(--accent2); background: rgba(74,240,176,0.04); }
+.callout.red { border-left-color: var(--danger); background: rgba(255,92,92,0.04); }
+
+.section-heading {
+font-size: 14px;
+font-weight: 600;
+color: #fff;
+margin: 20px 0 10px;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.section-heading::before {
+content: ‘’;
+display: block;
+width: 3px; height: 14px;
+background: var(--accent);
+border-radius: 2px;
+}
+
+.formula-note {
+background: var(--bg);
+border-left: 3px solid var(--accent);
+border-radius: 0 6px 6px 0;
+padding: 12px 16px;
+font-size: 12px;
+color: var(--muted);
+line-height: 1.7;
+margin-top: 14px;
+font-family: ‘IBM Plex Mono’, monospace;
+}
+
+.formula-note strong { color: var(--text); }
+
+footer {
+margin-top: 16px;
+font-size: 11px;
+color: var(--muted);
+text-align: center;
+font-family: ‘IBM Plex Mono’, monospace;
+max-width: 660px;
+}
+</style>
+
+</head>
+<body>
+
+<header>
+<div class="tag">Internal Quality Control Tool</div>
+<h1>QC <span>Sampling</span> Inspector</h1>
+<p class="subtitle">Statistically valid lot inspection using the Hypergeometric distribution</p>
+</header>
+
+<div class="tab-nav">
+<button class="tab-btn active" onclick="showTab('calculator', this)">Calculator</button>
+<button class="tab-btn" onclick="showTab('howto', this)">How To Use</button>
+<button class="tab-btn" onclick="showTab('passfail', this)">Pass / Fail</button>
+<button class="tab-btn" onclick="showTab('method', this)">The Math</button>
+</div>
+
+<!-- CALCULATOR -->
+
+<div id="tab-calculator" class="tab-section active">
+<div class="card">
+<div class="card-title"><span class="dot"></span> Lot Parameters</div>
+<div class="field">
+<label>Lot Size (N) <span class="hint">total parts in the batch</span></label>
+<input type="number" id="lotSize" value="700" min="1" oninput="calc()">
+</div>
+<div class="field">
+<label>Confidence Level <span class="hint">how sure do you want to be?</span></label>
+<div class="btn-row">
+<button class="btn-preset" onclick="setConf(0.90, this)">90%</button>
+<button class="btn-preset active" onclick="setConf(0.95, this)">95%</button>
+<button class="btn-preset" onclick="setConf(0.99, this)">99%</button>
+</div>
+</div>
+<div class="field">
+<label>Defect Rate to Detect (p) <span class="hint">smallest bad % that matters to you</span></label>
+<div class="slider-row">
+<input type="range" id="defectSlider" min="1" max="30" value="5" oninput="syncSlider(); calc()">
+<span class="slider-val" id="sliderDisplay">5%</span>
+</div>
+<div class="btn-row" style="margin-top:10px">
+<button class="btn-preset" onclick="setDefect(1)">1%</button>
+<button class="btn-preset" onclick="setDefect(2)">2%</button>
+<button class="btn-preset active" onclick="setDefect(5)">5%</button>
+<button class="btn-preset" onclick="setDefect(10)">10%</button>
+</div>
+<div style="font-size:12px;color:var(--muted);margin-top:8px;">↑ Set to the <em>smallest</em> defect rate that would be unacceptable</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Recommended Sample</div>
+<div class="result-grid">
+<div class="result-box primary">
+<div class="rlabel">Inspect This Many Parts</div>
+<div class="value" id="sampleSize">—</div>
+<div class="unit" id="sampleUnit"></div>
+</div>
+<div class="result-box">
+<div class="rlabel">% of Lot</div>
+<div class="value" id="pctLot">—</div>
+<div class="unit" id="pctLotUnit">of — pcs</div>
+</div>
+<div class="result-box">
+<div class="rlabel">Accept if ≤</div>
+<div class="value">0</div>
+<div class="unit">defects found</div>
+</div>
+</div>
+<div class="pct-bar-wrap"><div class="pct-bar" id="pctBar" style="width:0%"></div></div>
+<div class="pct-label"><span>0</span><span id="pctBarLabel"></span></div>
+<div class="verdict" id="verdict"></div>
+<div class="formula-note" id="formulaNote"></div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Confidence Comparison — lot of <span id="tableN">700</span></div>
+<table class="data-table">
+<thead><tr><th>Defect Rate</th><th>n @ 95% conf</th><th>% of lot</th></tr></thead>
+<tbody id="compBody"></tbody>
+</table>
+</div>
+</div>
+
+<!-- HOW TO USE -->
+
+<div id="tab-howto" class="tab-section">
+<div class="card">
+<div class="card-title"><span class="dot"></span> Overview</div>
+<p style="font-size:14px;color:var(--muted);line-height:1.75;">
+This tool tells you <strong style="color:var(--text)">how many parts to inspect</strong> from a lot so that your findings are statistically meaningful. Instead of guessing or inspecting everything, you pull a calculated sample — and the result either clears the lot or condemns it.
+</p>
+<div class="callout" style="margin-top:16px;">
+<strong>Core principle:</strong> You are not trying to find every bad part. You are trying to get statistical evidence about whether the lot as a whole is acceptable or not.
+</div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Step-by-Step Instructions</div>
+<ol class="step-list">
+<li>
+<div class="step-num">1</div>
+<div class="step-body">
+<strong>Enter your lot size</strong>
+<p>Type in the total number of parts in the batch. Default is <span class="em">700 pcs</span>. This can be any batch size.</p>
+</div>
+</li>
+<li>
+<div class="step-num">2</div>
+<div class="step-body">
+<strong>Choose your confidence level</strong>
+<p>
+<span class="em">90%</span> — Quick directional check. Low-stakes parts.<br>
+<span class="em">95%</span> — Industry standard. Use this for most situations.<br>
+<span class="em">99%</span> — Safety-critical parts where a bad part could cause injury or major failure.
+</p>
+</div>
+</li>
+<li>
+<div class="step-num">3</div>
+<div class="step-body">
+<strong>Set the defect rate threshold</strong>
+<p>Ask yourself: <em>"At what percentage of bad parts does this become a real problem?"</em> If even 1-in-20 bad (5%) is unacceptable, set it to 5%. The lower the threshold, the larger the required sample.</p>
+</div>
+</li>
+<li>
+<div class="step-num">4</div>
+<div class="step-body">
+<strong>Pull your sample — randomly</strong>
+<p>Do <strong style="color:var(--danger)">not</strong> cherry-pick good-looking parts. Do not pull only from one spot in the bin or pallet. Select parts from different positions throughout the lot.</p>
+</div>
+</li>
+<li>
+<div class="step-num">5</div>
+<div class="step-body">
+<strong>Inspect each part against your defect criteria</strong>
+<p>Use your standard inspection criteria. Count and record how many parts are nonconforming.</p>
+</div>
+</li>
+<li>
+<div class="step-num">6</div>
+<div class="step-body">
+<strong>Apply the decision rule</strong>
+<p>The <span class="em">"Accept if ≤"</span> number is your threshold — currently always <span class="em">0</span>. Zero defects found = PASS. One or more = FAIL. See the Pass/Fail tab for actions.</p>
+</div>
+</li>
+</ol>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Parameter Quick Reference</div>
+<div class="info-grid">
+<div class="info-box">
+<div class="ikey">Lot Size (N)</div>
+<div class="ival">Total parts in the batch being inspected.</div>
+</div>
+<div class="info-box">
+<div class="ikey">Sample Size (n)</div>
+<div class="ival">Parts you <span class="accent">must inspect</span>. Calculated by the tool.</div>
+</div>
+<div class="info-box">
+<div class="ikey">Confidence Level</div>
+<div class="ival">Probability that your test detects a problem if one truly exists.</div>
+</div>
+<div class="info-box">
+<div class="ikey">Defect Rate (p)</div>
+<div class="ival">Minimum bad-part % you want to be able to detect.</div>
+</div>
+<div class="info-box">
+<div class="ikey">Accept Number (c)</div>
+<div class="ival">Max defects allowed in sample to pass. This tool uses <span class="accent">c = 0</span>.</div>
+</div>
+<div class="info-box">
+<div class="ikey">Reject Number</div>
+<div class="ival">Any result above the accept number — <span class="accent">reject the lot</span>.</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- PASS / FAIL -->
+
+<div id="tab-passfail" class="tab-section">
+<div class="card">
+<div class="card-title"><span class="dot"></span> The Decision Rule</div>
+<div class="callout green">
+<strong>PASS:</strong> You inspect your sample and find <strong>zero (0) defective parts</strong>. Release the lot. You have statistically demonstrated — at your chosen confidence level — that the defect rate is likely below your threshold.
+</div>
+<div class="callout red" style="margin-top:0">
+<strong>FAIL:</strong> You find <strong>one (1) or more defective parts</strong> in your sample. Reject the lot. The sample provides statistical evidence that the lot defect rate exceeds your threshold.
+</div>
+<p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.65;">This tool uses an acceptance number of c=0 — the most conservative and common approach for internal QC. Any defect in the sample is a rejection trigger.</p>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Scenario Table — 57 pcs from 700 (95% conf, 5% threshold)</div>
+<table class="data-table">
+<thead>
+<tr><th>Defects Found</th><th>Result</th><th>What It Means</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr>
+<td style="color:var(--accent2);font-weight:600;">0</td>
+<td><span class="badge pass">PASS</span></td>
+<td style="color:var(--muted);font-size:12px;">95% confident lot has &lt;5% defects</td>
+<td><span class="badge neutral">Release lot</span></td>
+</tr>
+<tr>
+<td style="color:var(--danger);font-weight:600;">1</td>
+<td><span class="badge fail">FAIL</span></td>
+<td style="color:var(--muted);font-size:12px;">Evidence defect rate exceeds threshold</td>
+<td><span class="badge action">Sort or return</span></td>
+</tr>
+<tr>
+<td style="color:var(--danger);font-weight:600;">2</td>
+<td><span class="badge fail">FAIL</span></td>
+<td style="color:var(--muted);font-size:12px;">Strong evidence of systemic issue</td>
+<td><span class="badge action">Sort or return</span></td>
+</tr>
+<tr>
+<td style="color:var(--danger);font-weight:600;">3+</td>
+<td><span class="badge fail">FAIL</span></td>
+<td style="color:var(--muted);font-size:12px;">High defect rate — likely supplier issue</td>
+<td><span class="badge action">Escalate</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> What To Do When It Fails</div>
+<ol class="step-list">
+<li>
+<div class="step-num">A</div>
+<div class="step-body">
+<strong>100% Sort</strong>
+<p>Inspect every single part in the lot. Pull all nonconforming parts. Use when parts are recoverable and the sort cost is justified.</p>
+</div>
+</li>
+<li>
+<div class="step-num">B</div>
+<div class="step-body">
+<strong>Return to Supplier</strong>
+<p>Send the lot back with your sample findings as evidence. Document the defect count, type, and sample size for your records and any supplier corrective action request (SCAR).</p>
+</div>
+</li>
+<li>
+<div class="step-num">C</div>
+<div class="step-body">
+<strong>Scrap the Lot</strong>
+<p>If sorting cost exceeds part value, or the defect is safety-critical with zero tolerance, condemn and scrap the entire lot.</p>
+</div>
+</li>
+<li>
+<div class="step-num">D</div>
+<div class="step-body">
+<strong>Escalate</strong>
+<p>If 3+ defects are found, this may indicate a systemic problem. Escalate to engineering or supplier quality for formal corrective action.</p>
+</div>
+</li>
+</ol>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Important Caveats</div>
+<div class="callout blue">
+<strong>A PASS does not mean the lot is perfect.</strong> It means you have statistical confidence that the defect rate is below your threshold. There may still be some bad parts — you have evidence the rate is acceptably low.
+</div>
+<div class="callout" style="margin-top:0">
+<strong>Random sampling is critical.</strong> If you bias your sample toward parts that look good, your results are meaningless. The math only works if the sample is truly random.
+</div>
+<div class="callout red" style="margin-top:0">
+<strong>One defect = reject.</strong> There is no "it was only one." The accept number is zero. A single nonconforming part in the sample is statistically sufficient to reject the lot.
+</div>
+</div>
+</div>
+
+<!-- THE MATH -->
+
+<div id="tab-method" class="tab-section">
+<div class="card">
+<div class="card-title"><span class="dot"></span> Why Not Just Use a Fixed Percentage?</div>
+<p style="font-size:13px;color:var(--muted);line-height:1.75;">
+A common approach is to inspect "10% of the lot." The problem: that rule has no statistical basis. A 10% sample of 100 parts gives you very different confidence than a 10% sample of 10,000 parts. The correct approach ties sample size to a <strong style="color:var(--text)">specific confidence level</strong> and a <strong style="color:var(--text)">defect rate</strong> you care about detecting.
+</p>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> The Hypergeometric Distribution</div>
+<p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:12px;">
+When sampling <em>without replacement</em> from a finite lot, the correct probability model is the <strong style="color:var(--text)">Hypergeometric distribution</strong> — not the Binomial (which assumes an infinite population).
+</p>
+
+```
+<div class="section-heading">Variables</div>
+<div class="info-grid">
+<div class="info-box"><div class="ikey">N</div><div class="ival">Total lot size</div></div>
+<div class="info-box"><div class="ikey">D</div><div class="ival">Assumed defectives in lot = N × p</div></div>
+<div class="info-box"><div class="ikey">n</div><div class="ival">Sample size (what we solve for)</div></div>
+<div class="info-box"><div class="ikey">p</div><div class="ival">Defect rate threshold (e.g. 0.05)</div></div>
+</div>
+
+<div class="section-heading">Core Probability Formula</div>
+<p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:10px;">Probability of drawing n parts and finding zero defects, given D defective parts exist:</p>
+<div class="math-block"><span class="comment">// P(X = 0) — probability of missing ALL defects in sample</span>
+
+<span class="hi">C(D, 0) × C(N−D, n)</span>
+```
+
+P(X=0) = ─────────────────────
+<span class="hi">C(N, n)</span>
+
+<span class="comment">// Simplified to a running product (avoids huge factorials):</span>
+
+P(X=0) = <span class="hi2">∏</span> (N−D−i) / (N−i) for i = 0, 1, 2 … n−1</div>
+
+```
+<div class="section-heading">What We Actually Solve For</div>
+<p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:10px;">We want the probability of <em>detecting at least one defect</em> to meet or exceed the confidence level:</p>
+<div class="math-block">P(detect ≥ 1) = <span class="hi">1 − P(X=0)</span> ≥ confidence
+```
+
+<span class="comment">// Find the smallest n where this holds true:</span>
+<span class="hi">1 − P(X=0) ≥ confidence level</span>
+
+<span class="comment">// Example: N=700, p=5%, conf=95%</span>
+<span class="comment">// → D = 700 × 0.05 = 35 defective parts assumed</span>
+<span class="comment">// → Solve for n: answer is 57 parts</span></div>
+
+```
+<div class="callout blue">
+<strong>Why not the Binomial?</strong> The Binomial assumes sampling <em>with replacement</em> — effectively an infinite population. For finite lots, the Hypergeometric is exact. The difference matters most when your sample is a significant fraction of the lot, which it often is in QC.
+</div>
+```
+
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Worked Example</div>
+<div class="math-block"><span class="comment">// Given:</span>
+N = 700 <span class="comment">// lot size</span>
+p = 0.05 <span class="comment">// 5% defect rate threshold</span>
+D = 35 <span class="comment">// assumed defectives (700 × 0.05)</span>
+conf = 0.95 <span class="comment">// 95% confidence required</span>
+
+<span class="comment">// For n = 57, compute the running product:</span>
+P(X=0) = (665/700) × (664/699) × … [57 terms]
+= <span class="hi">0.049</span> <span class="comment">// ~4.9% chance of missing all defects</span>
+
+P(detect ≥1) = 1 − 0.049
+= <span class="hi2">0.951</span> <span class="comment">// 95.1% ✓ meets 95% threshold</span>
+
+<span class="comment">// For n = 56: P(detect ≥1) = 94.8% ✗ just under threshold</span>
+<span class="comment">// Therefore: minimum valid sample = 57 parts</span></div>
+
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> How Parameters Affect Sample Size</div>
+<table class="data-table">
+<thead><tr><th>Change</th><th>Effect on Sample Size</th></tr></thead>
+<tbody>
+<tr><td style="color:var(--muted)">Increase confidence (95% → 99%)</td><td style="color:var(--accent)">Larger sample needed</td></tr>
+<tr><td style="color:var(--muted)">Lower defect threshold (5% → 1%)</td><td style="color:var(--accent)">Much larger sample needed</td></tr>
+<tr><td style="color:var(--muted)">Larger lot size (700 → 1400)</td><td style="color:var(--accent)">Slightly larger — diminishing returns</td></tr>
+<tr><td style="color:var(--muted)">Raise accept number (c=0 → c=1)</td><td style="color:var(--muted)">Larger sample (not used in this tool)</td></tr>
+</tbody>
+</table>
+<div class="callout" style="margin-top:14px;">
+<strong>Key insight:</strong> Once lot size gets large (500+), sample size grows very slowly. Doubling the lot from 700 → 1400 barely changes the required sample. You don't need to inspect a fixed percentage — the math takes care of it.
+</div>
+</div>
+
+<div class="card">
+<div class="card-title"><span class="dot"></span> Standards Reference</div>
+<p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:12px;">This tool's methodology aligns with accepted statistical sampling standards. For formal supplier agreements or regulated industries, reference:</p>
+<div class="info-grid">
+<div class="info-box">
+<div class="ikey">ANSI/ASQ Z1.4</div>
+<div class="ival">Attribute sampling standard — widely used in manufacturing QC</div>
+</div>
+<div class="info-box">
+<div class="ikey">ISO 2859-1</div>
+<div class="ival">International equivalent — sampling by attributes</div>
+</div>
+<div class="info-box">
+<div class="ikey">MIL-STD-1916</div>
+<div class="ival">US DoD standard — zero-accept-number sampling (c=0), same as this tool</div>
+</div>
+<div class="info-box">
+<div class="ikey">This Tool</div>
+<div class="ival">Uses exact hypergeometric calculation — more precise than table-lookup standards</div>
+</div>
+</div>
+</div>
+</div>
+
+<footer>Hypergeometric distribution — exact method for finite lots &nbsp;|&nbsp; Internal use only</footer>
+
+<script>
+let confidence = 0.95;
+let defectRate = 0.05;
+
+function showTab(id, btn) {
+document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+document.getElementById('tab-' + id).classList.add('active');
+btn.classList.add('active');
+}
+
+function setConf(c, btn) {
+confidence = c;
+document.querySelectorAll('.btn-preset').forEach(b => {
+if (['90%','95%','99%'].includes(b.textContent)) b.classList.remove('active');
+});
+btn.classList.add('active');
+calc();
+}
+
+function setDefect(d) {
+defectRate = d / 100;
+document.getElementById('defectSlider').value = d;
+document.getElementById('sliderDisplay').textContent = d + '%';
+document.querySelectorAll('.btn-preset').forEach(b => {
+if (['1%','2%','5%','10%'].includes(b.textContent))
+b.classList.toggle('active', b.textContent === d + '%');
+});
+calc();
+}
+
+function syncSlider() {
+const v = parseInt(document.getElementById('defectSlider').value);
+defectRate = v / 100;
+document.getElementById('sliderDisplay').textContent = v + '%';
+document.querySelectorAll('.btn-preset').forEach(b => {
+if (['1%','2%','5%','10%'].includes(b.textContent))
+b.classList.toggle('active', b.textContent === v + '%');
+});
+}
+
+function probMissAll(N, D, n) {
+if (D === 0) return 1;
+if (n >= N) return 0;
+let p = 1;
+for (let i = 0; i < n; i++) {
+p *= (N - D - i) / (N - i);
+if (p <= 0) return 0;
+}
+return p;
+}
+
+function sampleSize(N, p, conf) {
+const D = Math.max(1, Math.ceil(N * p));
+for (let n = 1; n <= N; n++) {
+if (1 - probMissAll(N, D, n) >= conf) return n;
+}
+return N;
+}
+
+function calc() {
+const N = parseInt(document.getElementById('lotSize').value) || 700;
+const n = sampleSize(N, defectRate, confidence);
+const pct = (n / N * 100).toFixed(1);
+const D = Math.max(1, Math.round(N * defectRate));
+
+document.getElementById('sampleSize').textContent = n;
+document.getElementById('sampleUnit').textContent = `out of ${N} parts`;
+document.getElementById('pctLot').textContent = pct + '%';
+document.getElementById('pctLotUnit').textContent = `of ${N} pcs`;
+
+document.getElementById('pctBar').style.width = Math.min(100, parseFloat(pct)) + '%';
+document.getElementById('pctBarLabel').textContent = `${n} pcs`;
+
+document.getElementById('verdict').innerHTML =
+`✓ Inspecting <strong>${n} pcs</strong> gives you a <strong>${(confidence*100).toFixed(0)}% chance of detecting at least 1 defect</strong> if the lot has ≥${(defectRate*100).toFixed(0)}% bad parts (≥${D} pcs).<br>Find 0 defects → <strong>release</strong>. Find 1+ → <strong>reject</strong>.`;
+
+document.getElementById('formulaNote').innerHTML =
+`<strong>Calculation:</strong> Assumes ${D} defective pcs (${(defectRate*100).toFixed(0)}% of ${N}). Finds smallest n where P(catch ≥1) ≥ ${(confidence*100).toFixed(0)}% using the Hypergeometric distribution.`;
+
+document.getElementById('tableN').textContent = N;
+const rates = [1, 2, 5, 10, 15, 20];
+const tbody = document.getElementById('compBody');
+tbody.innerHTML = '';
+rates.forEach(r => {
+const ns = sampleSize(N, r/100, 0.95);
+const tr = document.createElement('tr');
+if (Math.abs(r - defectRate*100) < 0.5) tr.classList.add('highlight');
+tr.innerHTML = `<td style="color:var(--muted)">${r}% defective</td><td style="color:var(--accent)">${ns} pcs</td><td>${(ns/N*100).toFixed(1)}%</td>`;
+tbody.appendChild(tr);
+});
+}
+
+calc();
+</script>
+
+</body>
+</html>
